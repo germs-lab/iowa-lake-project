@@ -2,6 +2,15 @@
 #rm(list=ls())
 
 #setwd("~/")
+
+##########   Load library   ############
+library(phyloseq)
+library(ape)
+library(DESeq2)
+library("ggplot2")
+library("plyr")
+library("vegan")
+
 ##########   read data   ############
 #http://joey711.github.io/phyloseq-demo/import-biom-sd-example.html
 #source('http://bioconductor.org/biocLite.R')
@@ -44,12 +53,28 @@ deseq2_deseqds <- DESeqDataSetFromMatrix(countData = countData, colData = colDat
 ## Differential expression analysis.
 #deseq2_de <- DESeq(deseq2_deseqds)
 deseq2_de <- DESeq(deseq2_deseqds, fitType = "local")
+
 count <- counts(deseq2_de, normalized=TRUE)
 otu_table(physeq4) <- otu_table(count, taxa_are_rows=TRUE)
+
+#saveRDS(physeq4, "~/Box Sync/Github/germs-lab/iowa_lake_project/water-project-objext.rds")
+physeq4 <- readRDS("~/Box Sync/Github/germs-lab/iowa_lake_project/water-project-objext.rds")
+
 
 #plot
 qiime.ord <- ordinate(physeq4, "PCoA","unifrac",weighted = TRUE)
 p1 = plot_ordination(physeq4, qiime.ord, color="new_group")
+p1 + stat_ellipse()
+cor = qiime.ord$vectors
+met = sample_data(physeq4)[,c(4,5,6,7,8,9,10,11,12,13,14)]
+datEF = envfit(cor, met)
+datEF.df = as.data.frame(datEF$vectors$arrows*sqrt(datEF$vectors$r))
+datEF.df$species <- rownames(datEF.df)
+p1+ geom_segment(data = datEF.df, aes(x=0, xend=Axis.1, y=0, yend=Axis.2), arrow = arrow(length=unit(0.2, "cm")), colour="grey")+geom_text(data= datEF.df, aes(x= Axis.1, y=Axis.2, label=species), size=5,colour="black") + stat_ellipse()
+
+
+
+
 pdf("pcoa.pdf", width=6, height=6)
 print(p1)
 dev.off()
@@ -57,6 +82,8 @@ dev.off()
 #NMDS
 GP.ord <- ordinate(physeq4, "NMDS", "bray")
 p1 = plot_ordination(physeq4, GP.ord, color="new_group")
+p1 + stat_ellipse()
+
 pdf("NMDS.pdf", width=6, height=6)
 print(p1)
 dev.off()
